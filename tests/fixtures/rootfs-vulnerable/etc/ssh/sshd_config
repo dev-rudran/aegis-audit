@@ -1,0 +1,15 @@
+# aegis vulnerable fixture
+Port 22
+PermitRootLogin yes
+PasswordAuthentication yes
+PermitEmptyPasswords yes
+MaxAuthTries 6
+IgnoreRhosts no
+HostbasedAuthentication yes
+PermitUserEnvironment yes
+UsePAM no
+LogLevel QUIET
+LoginGraceTime 120
+Ciphers aes128-cbc,3des-cbc
+MACs hmac-md5,hmac-sha1-96
+KexAlgorithms diffie-hellman-group14-sha1

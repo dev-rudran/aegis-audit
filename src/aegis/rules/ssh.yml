@@ -1,0 +1,311 @@
+rules:
+  - id: AEGIS-0001
+    title: SSH server configuration is not group or world accessible
+    description: >
+      /etc/ssh/sshd_config controls authentication and transport policy. It must be
+      owned by root and readable only by root, otherwise local users can learn or
+      alter the server's security posture.
+    severity: high
+    category: SSH
+    cis: "CIS Ubuntu Linux 22.04 5.3.1"
+    check:
+      type: file_mode
+      params:
+        path: /etc/ssh/sshd_config
+        max_mode: "0600"
+        missing: fail
+    remediation:
+      text: Restrict /etc/ssh/sshd_config to mode 0600 and ownership root:root.
+      safe: true
+      command: chmod 600 /etc/ssh/sshd_config && chown root:root /etc/ssh/sshd_config
+      fix:
+        type: file_mode
+        path: /etc/ssh/sshd_config
+        mode: "0600"
+    tags: [ssh, permissions]
+
+  - id: AEGIS-0002
+    title: SSH root login is permitted
+    description: >
+      Direct root logins remove accountability and expose the most privileged
+      account to password guessing. Administrators should log in as themselves and
+      escalate with sudo.
+    severity: critical
+    category: SSH
+    cis: "CIS Ubuntu Linux 22.04 5.3.7"
+    check:
+      type: sshd
+      params:
+        key: PermitRootLogin
+        value: "no"
+        default: prohibit-password
+    remediation:
+      text: Set PermitRootLogin no in the global section of /etc/ssh/sshd_config and reload sshd.
+      safe: true
+      command: systemctl reload ssh
+      fix:
+        type: sshd_set
+        path: /etc/ssh/sshd_config
+        key: PermitRootLogin
+        value: "no"
+    tags: [ssh, authentication]
+
+  - id: AEGIS-0003
+    title: SSH password authentication is enabled
+    description: >
+      Password authentication permits online guessing and credential stuffing.
+      Key-based authentication should be required for interactive access.
+    severity: high
+    category: SSH
+    cis: "CIS Ubuntu Linux 22.04 5.3.4"
+    check:
+      type: sshd
+      params:
+        key: PasswordAuthentication
+        value: "no"
+        default: "yes"
+    remediation:
+      text: Set PasswordAuthentication no after confirming every administrator has a working key.
+      safe: true
+      command: sshd -t && systemctl reload ssh
+      fix:
+        type: sshd_set
+        path: /etc/ssh/sshd_config
+        key: PasswordAuthentication
+        value: "no"
+    tags: [ssh, authentication]
+
+  - id: AEGIS-0004
+    title: SSH accepts empty passwords
+    description: >
+      PermitEmptyPasswords yes allows accounts with blank passwords to authenticate
+      over the network and should never be enabled.
+    severity: critical
+    category: SSH
+    cis: "CIS Ubuntu Linux 22.04 5.3.11"
+    check:
+      type: sshd
+      params:
+        key: PermitEmptyPasswords
+        value: "no"
+        default: "no"
+    remediation:
+      text: Set PermitEmptyPasswords no and ensure no account has an empty password hash.
+      safe: true
+      command: systemctl reload ssh
+      fix:
+        type: sshd_set
+        path: /etc/ssh/sshd_config
+        key: PermitEmptyPasswords
+        value: "no"
+    tags: [ssh, authentication]
+
+  - id: AEGIS-0005
+    title: SSH MaxAuthTries exceeds four
+    description: >
+      Limiting authentication attempts per connection reduces the effectiveness of
+      online password guessing and slows brute-force attempts.
+    severity: medium
+    category: SSH
+    cis: "CIS Ubuntu Linux 22.04 5.3.8"
+    check:
+      type: sshd
+      params:
+        key: MaxAuthTries
+        value: ["1", "2", "3", "4"]
+        default: "6"
+    remediation:
+      text: Set MaxAuthTries 4 or lower.
+      safe: true
+      fix:
+        type: sshd_set
+        path: /etc/ssh/sshd_config
+        key: MaxAuthTries
+        value: "4"
+    tags: [ssh, brute-force]
+
+  - id: AEGIS-0006
+    title: SSH IgnoreRhosts is not enabled
+    description: >
+      Host-based rhosts authentication bypasses normal account authentication and
+      trusts client-supplied identity.
+    severity: medium
+    category: SSH
+    cis: "CIS Ubuntu Linux 22.04 5.3.9"
+    check:
+      type: sshd
+      params:
+        key: IgnoreRhosts
+        value: "yes"
+        default: "yes"
+    remediation:
+      text: Set IgnoreRhosts yes.
+      safe: true
+      fix:
+        type: sshd_set
+        path: /etc/ssh/sshd_config
+        key: IgnoreRhosts
+        value: "yes"
+    tags: [ssh, authentication]
+
+  - id: AEGIS-0007
+    title: SSH host-based authentication is enabled
+    description: >
+      HostbasedAuthentication trusts the client host identity rather than the user's
+      cryptographic credentials and should remain disabled.
+    severity: high
+    category: SSH
+    cis: "CIS Ubuntu Linux 22.04 5.3.10"
+    check:
+      type: sshd
+      params:
+        key: HostbasedAuthentication
+        value: "no"
+        default: "no"
+    remediation:
+      text: Set HostbasedAuthentication no.
+      safe: true
+      fix:
+        type: sshd_set
+        path: /etc/ssh/sshd_config
+        key: HostbasedAuthentication
+        value: "no"
+    tags: [ssh, authentication]
+
+  - id: AEGIS-0008
+    title: SSH user environment processing is enabled
+    description: >
+      PermitUserEnvironment allows users to set environment variables that may
+      influence login processing and should be disabled unless explicitly required.
+    severity: medium
+    category: SSH
+    cis: "CIS Ubuntu Linux 22.04 5.3.12"
+    check:
+      type: sshd
+      params:
+        key: PermitUserEnvironment
+        value: "no"
+        default: "no"
+    remediation:
+      text: Set PermitUserEnvironment no.
+      safe: true
+      fix:
+        type: sshd_set
+        path: /etc/ssh/sshd_config
+        key: PermitUserEnvironment
+        value: "no"
+    tags: [ssh, environment]
+
+  - id: AEGIS-0009
+    title: SSH PAM integration is disabled
+    description: >
+      UsePAM yes is required for account lockout, password quality, session limits,
+      and other PAM-enforced controls to apply to SSH sessions.
+    severity: medium
+    category: SSH
+    cis: "CIS Ubuntu Linux 22.04 5.3.6"
+    check:
+      type: sshd
+      params:
+        key: UsePAM
+        value: "yes"
+        default: "no"
+    remediation:
+      text: Set UsePAM yes and verify PAM services still permit intended authentication.
+      safe: true
+      fix:
+        type: sshd_set
+        path: /etc/ssh/sshd_config
+        key: UsePAM
+        value: "yes"
+    tags: [ssh, pam]
+
+  - id: AEGIS-0010
+    title: SSH LogLevel is not INFO or VERBOSE
+    description: >
+      INFO or VERBOSE logging records authentication events and key fingerprints
+      needed for investigation without logging sensitive session data.
+    severity: low
+    category: SSH
+    cis: "CIS Ubuntu Linux 22.04 5.3.5"
+    check:
+      type: sshd
+      params:
+        key: LogLevel
+        value: ["INFO", "VERBOSE"]
+        default: "INFO"
+    remediation:
+      text: Set LogLevel INFO or VERBOSE.
+      safe: true
+      fix:
+        type: sshd_set
+        path: /etc/ssh/sshd_config
+        key: LogLevel
+        value: "INFO"
+    tags: [ssh, logging]
+
+  - id: AEGIS-0011
+    title: SSH LoginGraceTime exceeds sixty seconds
+    description: >
+      A long unauthenticated window consumes connection slots and extends exposure
+      to pre-authentication attacks.
+    severity: medium
+    category: SSH
+    cis: "CIS Ubuntu Linux 22.04 5.3.17"
+    check:
+      type: sshd
+      params:
+        key: LoginGraceTime
+        value: ["30", "60"]
+        default: "120"
+    remediation:
+      text: Set LoginGraceTime to 60 seconds or less.
+      safe: true
+      fix:
+        type: sshd_set
+        path: /etc/ssh/sshd_config
+        key: LoginGraceTime
+        value: "60"
+    tags: [ssh, timeout]
+
+  - id: AEGIS-0012
+    title: SSH access is not restricted to named users or groups
+    description: >
+      An AllowUsers or AllowGroups directive limits which accounts may authenticate
+      over SSH, reducing the blast radius of compromised service accounts.
+    severity: medium
+    category: SSH
+    cis: "CIS Ubuntu Linux 22.04 5.3.4"
+    check:
+      type: file_content
+      params:
+        path: /etc/ssh/sshd_config
+        pattern: '(?m)^\s*(AllowUsers|AllowGroups)\s+\S+'
+        state: present
+        missing: fail
+    remediation:
+      text: Add AllowGroups ssh-users (or an equivalent AllowUsers list) to sshd_config.
+      safe: false
+      command: "printf '\\nAllowGroups ssh-users\\n' >> /etc/ssh/sshd_config && sshd -t"
+    tags: [ssh, access-control]
+
+  - id: AEGIS-0081
+    title: The SSH warning banner file is missing
+    description: >
+      sshd references /etc/issue.net through the Banner directive. If the file is
+      absent, remote users see no legal warning before authentication.
+    severity: low
+    category: SSH
+    cis: "CIS Ubuntu Linux 22.04 5.3.18"
+    check:
+      type: file_exists
+      params:
+        path: /etc/issue.net
+        state: present
+        kind: file
+    remediation:
+      text: Create /etc/issue.net with an approved warning and ensure sshd_config sets Banner /etc/issue.net.
+      safe: false
+      command: "printf 'Authorized use only.\\n' > /etc/issue.net"
+    tags: [ssh, banner]
+

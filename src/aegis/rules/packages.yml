@@ -1,0 +1,97 @@
+rules:
+  - id: AEGIS-0070
+    title: A telnet server is installed
+    description: >
+      Telnet transmits credentials and session data in clear text and has no place
+      on a hardened host. Remove the server package and use SSH instead.
+    severity: high
+    category: Packages
+    cis: "CIS Distribution Independent Linux 2.2 (legacy network services)"
+    check:
+      type: package
+      params:
+        name: [telnetd, telnet-server, inetutils-telnetd]
+        state: removed
+    remediation:
+      text: Remove every installed telnet server package.
+      safe: false
+      command: "apt-get remove --purge telnetd inetutils-telnetd telnet-server"
+    tags: [packages, telnet, legacy]
+
+  - id: AEGIS-0071
+    title: An rsh server is installed
+    description: >
+      rsh and rlogin trust host-based authentication and send data without
+      encryption. They are unsuitable for any modern environment.
+    severity: high
+    category: Packages
+    cis: "CIS Distribution Independent Linux 2.3 (rsh services)"
+    check:
+      type: package
+      params:
+        name: [rsh-server, rsh]
+        state: removed
+    remediation:
+      text: Remove the rsh server package.
+      safe: false
+      command: "apt-get remove --purge rsh-server rsh"
+    tags: [packages, rsh, legacy]
+
+  - id: AEGIS-0072
+    title: A TFTP server is installed
+    description: >
+      TFTP provides unauthenticated file transfer and is frequently abused for
+      staging payloads or exfiltrating data. It should not be installed without a
+      documented requirement.
+    severity: high
+    category: Packages
+    cis: "CIS Distribution Independent Linux 2.2 (tftp services)"
+    check:
+      type: package
+      params:
+        name: [tftpd-hpa, tftp-server, atftpd]
+        state: removed
+    remediation:
+      text: Remove the TFTP server package unless it is an approved, isolated requirement.
+      safe: false
+      command: "apt-get remove --purge tftpd-hpa atftpd tftp-server"
+    tags: [packages, tftp, legacy]
+
+  - id: AEGIS-0073
+    title: xinetd is installed
+    description: >
+      xinetd starts legacy network services on demand and often exposes services
+      that are otherwise disabled. Managed hosts should not run it.
+    severity: medium
+    category: Packages
+    cis: "CIS Ubuntu Linux 22.04 2.2.1"
+    check:
+      type: package
+      params:
+        name: xinetd
+        state: removed
+    remediation:
+      text: Remove xinetd and migrate any required service to a supervised systemd unit.
+      safe: false
+      command: "apt-get remove --purge xinetd"
+    tags: [packages, xinetd, legacy]
+
+  - id: AEGIS-0074
+    title: Automatic security updates are not installed
+    description: >
+      Timely patching is the highest-value control against known exploitation.
+      unattended-upgrades (Debian/Ubuntu) or dnf-automatic (RPM distributions)
+      applies security updates without waiting for an operator.
+    severity: medium
+    category: Packages
+    cis: "CIS Ubuntu Linux 22.04 1.9"
+    check:
+      type: package
+      params:
+        name: [unattended-upgrades, dnf-automatic]
+        state: installed
+    remediation:
+      text: Install and configure automatic security updates, then verify the timer or service is active.
+      safe: false
+      command: "apt-get install unattended-upgrades && dpkg-reconfigure --priority=low unattended-upgrades"
+    tags: [packages, updates, patching]

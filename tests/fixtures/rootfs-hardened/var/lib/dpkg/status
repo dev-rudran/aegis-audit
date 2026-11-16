@@ -1,0 +1,20 @@
+Package: base-files
+Status: install ok installed
+Priority: required
+Section: admin
+Version: 12.4
+Architecture: amd64
+
+Package: unattended-upgrades
+Status: install ok installed
+Priority: optional
+Section: admin
+Version: 2.9.1
+Architecture: all
+
+Package: openssh-server
+Status: install ok installed
+Priority: optional
+Section: net
+Version: 9.6p1
+Architecture: amd64

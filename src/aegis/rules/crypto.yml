@@ -1,0 +1,109 @@
+rules:
+  - id: AEGIS-0013
+    title: SSH allows weak CBC or legacy ciphers
+    description: >
+      Ancient ciphers such as 3DES, RC4, Blowfish, CAST, and CBC-mode AES lack
+      modern integrity guarantees or have small effective key sizes. Explicitly
+      configuring strong AEAD ciphers removes them from negotiation.
+    severity: high
+    category: Crypto
+    cis: "CIS Ubuntu Linux 22.04 5.3.13"
+    check:
+      type: file_content
+      params:
+        path: /etc/ssh/sshd_config
+        pattern: '(?im)^\s*Ciphers\s+.*\b(3des-cbc|arcfour|arcfour128|arcfour256|blowfish-cbc|cast128-cbc|des-cbc|aes128-cbc|aes192-cbc|aes256-cbc)\b'
+        state: absent
+        missing: fail
+    remediation:
+      text: Configure only AEAD ciphers, for example chacha20-poly1305@openssh.com and aes256-gcm@openssh.com.
+      safe: false
+      command: "sshd -T | grep -i '^ciphers'"
+    tags: [crypto, ssh, ciphers]
+
+  - id: AEGIS-0014
+    title: SSH allows weak MAC algorithms
+    description: >
+      MD5 and truncated SHA-1 MACs provide insufficient integrity protection.
+      ETM SHA-2 or AEAD ciphers should be used instead.
+    severity: high
+    category: Crypto
+    cis: "CIS Ubuntu Linux 22.04 5.3.14"
+    check:
+      type: file_content
+      params:
+        path: /etc/ssh/sshd_config
+        pattern: '(?im)^\s*MACs\s+.*\b(hmac-md5|hmac-md5-96|hmac-sha1-96|umac-64@openssh\.com)\b'
+        state: absent
+        missing: fail
+    remediation:
+      text: Configure ETM SHA-2 MACs such as hmac-sha2-512-etm@openssh.com and hmac-sha2-256-etm@openssh.com.
+      safe: false
+      command: "sshd -T | grep -i '^macs'"
+    tags: [crypto, ssh, mac]
+
+  - id: AEGIS-0015
+    title: SSH allows SHA-1 key exchange algorithms
+    description: >
+      SHA-1 based Diffie-Hellman key exchange is deprecated and has known weaknesses.
+      Curve25519 or SHA-2 group exchange should be used.
+    severity: high
+    category: Crypto
+    cis: "CIS Ubuntu Linux 22.04 5.3.15"
+    check:
+      type: file_content
+      params:
+        path: /etc/ssh/sshd_config
+        pattern: '(?im)^\s*KexAlgorithms\s+.*(diffie-hellman-group1-sha1|diffie-hellman-group14-sha1|diffie-hellman-group-exchange-sha1)'
+        state: absent
+        missing: fail
+    remediation:
+      text: Configure curve25519-sha256 and SHA-2 group exchange algorithms only.
+      safe: false
+      command: "sshd -T | grep -i '^kexalgorithms'"
+    tags: [crypto, ssh, key-exchange]
+
+  - id: AEGIS-0016
+    title: OpenSSL minimum protocol version is below TLS 1.2
+    description: >
+      The system OpenSSL configuration must not permit TLS 1.0 or 1.1, which are
+      deprecated and lack modern cipher suites.
+    severity: high
+    category: Crypto
+    cis: "CIS Distribution Independent Linux 1.6 (system-wide crypto policy)"
+    check:
+      type: file_content
+      params:
+        path: /etc/ssl/openssl.cnf
+        pattern: '(?m)^\s*MinProtocol\s*=\s*TLSv1\.[23]\s*$'
+        state: present
+        missing: fail
+    remediation:
+      text: Set MinProtocol = TLSv1.2 in the system stanza of /etc/ssl/openssl.cnf.
+      safe: false
+      command: "grep -R '^[[:space:]]*MinProtocol' /etc/ssl/openssl.cnf"
+    tags: [crypto, tls, openssl]
+
+  - id: AEGIS-0017
+    title: Password hashing does not use SHA-512 or yescrypt
+    description: >
+      ENCRYPT_METHOD in login.defs determines the hash for new passwords. SHA-512
+      or yescrypt is required; DES and MD5-based hashes are not acceptable.
+    severity: high
+    category: Crypto
+    cis: "CIS Ubuntu Linux 22.04 5.4.4"
+    check:
+      type: login_defs
+      params:
+        key: ENCRYPT_METHOD
+        allowed: ["SHA512", "YESCRYPT"]
+        missing: fail
+    remediation:
+      text: Set ENCRYPT_METHOD SHA512 or YESCRYPT and rotate weak existing hashes.
+      safe: true
+      fix:
+        type: login_defs_set
+        path: /etc/login.defs
+        key: ENCRYPT_METHOD
+        value: SHA512
+    tags: [crypto, passwords, hashing]

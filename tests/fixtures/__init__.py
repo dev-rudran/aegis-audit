@@ -1,0 +1,1 @@
+"""Committed sample rootfs fixtures."""

@@ -1,0 +1,57 @@
+rules:
+  - id: AEGIS-0067
+    title: The UFW host firewall is not enabled
+    description: >
+      A host firewall limits inbound exposure to services that are intentionally
+      published. UFW must be enabled for its default policy to take effect.
+    severity: high
+    category: Firewall
+    cis: "CIS Ubuntu Linux 22.04 3.5.1.2"
+    check:
+      type: firewall
+      params:
+        engine: ufw
+        setting: enabled
+    remediation:
+      text: Enable UFW after confirming management access will not be locked out.
+      safe: false
+      command: "ufw --force enable"
+    tags: [firewall, ufw]
+
+  - id: AEGIS-0068
+    title: UFW default inbound policy is not deny
+    description: >
+      The default incoming policy must drop or reject traffic that is not explicitly
+      allowed. A permissive default exposes every listening service.
+    severity: high
+    category: Firewall
+    cis: "CIS Ubuntu Linux 22.04 3.5.1.3"
+    check:
+      type: firewall
+      params:
+        engine: ufw
+        setting: default_incoming
+    remediation:
+      text: Set DEFAULT_INPUT_POLICY="DROP" in /etc/default/ufw and reload the firewall.
+      safe: false
+      command: "ufw default deny incoming && ufw reload"
+    tags: [firewall, ufw, default-policy]
+
+  - id: AEGIS-0069
+    title: No supported host firewall is enabled
+    description: >
+      At least one of UFW, firewalld, or nftables must enforce an inbound policy.
+      Workloads on cloud networks still need host-level filtering for defence in depth.
+    severity: high
+    category: Firewall
+    cis: "CIS Ubuntu Linux 22.04 3.5 (host-based firewall)"
+    check:
+      type: firewall
+      params:
+        engine: any
+        setting: enabled
+    remediation:
+      text: Enable UFW, firewalld, or an equivalent nftables policy with a default-deny input chain.
+      safe: false
+      command: "ufw status verbose"
+    tags: [firewall, defence-in-depth]

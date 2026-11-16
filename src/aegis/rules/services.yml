@@ -1,0 +1,116 @@
+rules:
+  - id: AEGIS-0075
+    title: The cron daemon is not enabled
+    description: >
+      Scheduled maintenance and security jobs depend on cron. Disabling it silently
+      stops rotation, backup, and patch tasks.
+    severity: medium
+    category: Services
+    cis: "CIS Ubuntu Linux 22.04 5.1.1"
+    check:
+      type: service
+      params:
+        name: cron
+        state: enabled
+    remediation:
+      text: Enable and start cron.
+      safe: false
+      command: "systemctl --now enable cron"
+    tags: [services, cron]
+
+  - id: AEGIS-0076
+    title: The SSH service is not enabled
+    description: >
+      Administrative access should be available after reboot through the audited
+      SSH service. An unexpectedly disabled SSH unit can indicate tampering.
+    severity: medium
+    category: Services
+    cis: "CIS Ubuntu Linux 22.04 5.3 (SSH service)"
+    check:
+      type: service
+      params:
+        name: ssh
+        state: enabled
+    remediation:
+      text: Enable and start ssh.
+      safe: false
+      command: "systemctl --now enable ssh"
+    tags: [services, ssh]
+
+  - id: AEGIS-0077
+    title: The telnet socket is enabled
+    description: >
+      systemd socket activation can expose telnet even when no inetd process is
+      running. The socket must be disabled and masked.
+    severity: high
+    category: Services
+    cis: "CIS Distribution Independent Linux 2.2 (telnet services)"
+    check:
+      type: service
+      params:
+        name: telnet.socket
+        state: disabled
+    remediation:
+      text: Disable and mask the telnet socket, then remove the server package.
+      safe: false
+      command: "systemctl disable --now telnet.socket && systemctl mask telnet.socket"
+    tags: [services, telnet, socket]
+
+  - id: AEGIS-0078
+    title: The rsh socket is enabled
+    description: >
+      rsh socket activation exposes unauthenticated remote shell access and must not
+      be enabled.
+    severity: high
+    category: Services
+    cis: "CIS Distribution Independent Linux 2.3 (rsh services)"
+    check:
+      type: service
+      params:
+        name: rsh.socket
+        state: disabled
+    remediation:
+      text: Disable and mask the rsh socket.
+      safe: false
+      command: "systemctl disable --now rsh.socket && systemctl mask rsh.socket"
+    tags: [services, rsh, socket]
+
+  - id: AEGIS-0079
+    title: The tftp socket is enabled
+    description: >
+      TFTP socket activation makes an unauthenticated file transfer service reachable
+      without an administrator starting it explicitly.
+    severity: medium
+    category: Services
+    cis: "CIS Distribution Independent Linux 2.2 (tftp services)"
+    check:
+      type: service
+      params:
+        name: tftp.socket
+        state: disabled
+    remediation:
+      text: Disable and mask the tftp socket.
+      safe: false
+      command: "systemctl disable --now tftp.socket && systemctl mask tftp.socket"
+    tags: [services, tftp, socket]
+
+  - id: AEGIS-0080
+    title: Legacy clear-text or unauthenticated ports are listening
+    description: >
+      FTP, telnet, TFTP, rpcbind, and rsh-family services transmit credentials or
+      data without adequate protection. They must not accept network connections on
+      a hardened host.
+    severity: high
+    category: Services
+    cis: "CIS Distribution Independent Linux 2.2-2.3 (legacy services)"
+    check:
+      type: listening_port
+      params:
+        mode: denied
+        ports: [21, 23, 69, 111, 512, 513, 514]
+        ignore_loopback: false
+    remediation:
+      text: Stop the owning service or socket unit, remove its package, and confirm with ss -lntup.
+      safe: false
+      command: "ss -lntup"
+    tags: [services, ports, legacy]

@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install
+        run: python -m pip install --upgrade pip && python -m pip install -e ".[dev]"
+
+      - name: Lint
+        run: ruff check .
+
+      - name: Format check
+        run: ruff format --check .
+
+      - name: Security lint
+        run: bandit -r src
+
+      - name: Tests
+        run: pytest -q
+
+      - name: Validate bundled rule pack
+        run: aegis rules validate
+
+      - name: Smoke test every report format
+        run: |
+          aegis --root tests/fixtures/rootfs-hardened --fail-on never -f json -o /tmp/aegis.json
+          aegis --root tests/fixtures/rootfs-hardened --fail-on never -f md -o /tmp/aegis.md
+          aegis --root tests/fixtures/rootfs-hardened --fail-on never -f html -o /tmp/aegis.html
+          aegis --root tests/fixtures/rootfs-hardened --fail-on never -f sarif -o /tmp/aegis.sarif.json
+          test -s /tmp/aegis.json
+          test -s /tmp/aegis.md
+          test -s /tmp/aegis.html
+          test -s /tmp/aegis.sarif.json
+
+  docs:
+    name: Generated docs are current
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install
+        run: python -m pip install pyyaml
+
+      - name: Regenerate rule reference
+        run: python scripts/generate_rule_docs.py
+
+      - name: Fail on drift
+        run: git diff --exit-code docs/RULES.md

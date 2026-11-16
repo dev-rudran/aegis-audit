@@ -1,0 +1,218 @@
+rules:
+  - id: AEGIS-0032
+    title: /etc/passwd permissions are too broad
+    description: >
+      /etc/passwd must be world-readable but writable only by root. Broader write
+      access allows account manipulation and privilege escalation.
+    severity: high
+    category: Filesystem
+    cis: "CIS Ubuntu Linux 22.04 6.1.1"
+    check:
+      type: file_mode
+      params:
+        path: /etc/passwd
+        max_mode: "0644"
+        missing: fail
+    remediation:
+      text: Set /etc/passwd ownership root:root and mode 0644.
+      safe: true
+      command: chmod 644 /etc/passwd && chown root:root /etc/passwd
+      fix:
+        type: file_mode
+        path: /etc/passwd
+        mode: "0644"
+    tags: [filesystem, permissions, accounts]
+
+  - id: AEGIS-0033
+    title: /etc/group permissions are too broad
+    description: >
+      /etc/group must be writable only by root. Unauthorized changes can grant
+      group-based access to sensitive resources.
+    severity: high
+    category: Filesystem
+    cis: "CIS Ubuntu Linux 22.04 6.1.3"
+    check:
+      type: file_mode
+      params:
+        path: /etc/group
+        max_mode: "0644"
+        missing: fail
+    remediation:
+      text: Set /etc/group ownership root:root and mode 0644.
+      safe: true
+      command: chmod 644 /etc/group && chown root:root /etc/group
+      fix:
+        type: file_mode
+        path: /etc/group
+        mode: "0644"
+    tags: [filesystem, permissions, accounts]
+
+  - id: AEGIS-0034
+    title: /etc/shadow is accessible to non-root users
+    description: >
+      Password hashes in /etc/shadow must not be readable by unprivileged users.
+      Offline cracking of leaked hashes is usually trivial for weak passwords.
+    severity: critical
+    category: Filesystem
+    cis: "CIS Ubuntu Linux 22.04 6.1.5"
+    check:
+      type: file_mode
+      params:
+        path: /etc/shadow
+        max_mode: "0640"
+        missing: fail
+    remediation:
+      text: Set /etc/shadow ownership root:shadow and mode 0640.
+      safe: true
+      command: chmod 640 /etc/shadow && chown root:shadow /etc/shadow
+      fix:
+        type: file_mode
+        path: /etc/shadow
+        mode: "0640"
+    tags: [filesystem, permissions, passwords]
+
+  - id: AEGIS-0035
+    title: /etc/shadow- backup is accessible to non-root users
+    description: >
+      The previous shadow database has the same sensitivity as the live file and
+      must not be readable by unprivileged users.
+    severity: high
+    category: Filesystem
+    cis: "CIS Ubuntu Linux 22.04 6.1.6"
+    check:
+      type: file_mode
+      params:
+        path: /etc/shadow-
+        max_mode: "0640"
+        missing: fail
+    remediation:
+      text: Set /etc/shadow- ownership root:shadow and mode 0640.
+      safe: true
+      command: chmod 640 /etc/shadow- && chown root:shadow /etc/shadow-
+      fix:
+        type: file_mode
+        path: /etc/shadow-
+        mode: "0640"
+    tags: [filesystem, permissions, passwords]
+
+  - id: AEGIS-0036
+    title: /etc/gshadow is accessible to non-root users
+    description: >
+      /etc/gshadow stores group password hashes and administrative membership and
+      must be restricted to root and the shadow group.
+    severity: high
+    category: Filesystem
+    cis: "CIS Ubuntu Linux 22.04 6.1.7"
+    check:
+      type: file_mode
+      params:
+        path: /etc/gshadow
+        max_mode: "0640"
+        missing: fail
+    remediation:
+      text: Set /etc/gshadow ownership root:shadow and mode 0640.
+      safe: true
+      command: chmod 640 /etc/gshadow && chown root:shadow /etc/gshadow
+      fix:
+        type: file_mode
+        path: /etc/gshadow
+        mode: "0640"
+    tags: [filesystem, permissions, groups]
+
+  - id: AEGIS-0037
+    title: World-writable files exist
+    description: >
+      Any regular file writable by every local user can be used to tamper with
+      configuration, inject code, or disrupt services. World-writable files should
+      be limited to explicitly managed temporary locations.
+    severity: high
+    category: Filesystem
+    cis: "CIS Ubuntu Linux 22.04 6.1.9"
+    check:
+      type: world_writable
+      params:
+        root: /
+        max_depth: 8
+        max_entries: 50000
+        exclude_dirs: [proc, sys, dev, run]
+    remediation:
+      text: Identify each reported path, remove world-write permission, and determine how it was created.
+      safe: false
+      command: "find / -xdev -type f -perm -0002 -print 2>/dev/null"
+    tags: [filesystem, permissions, integrity]
+
+  - id: AEGIS-0038
+    title: Cron configuration permissions are too permissive
+    description: >
+      /etc/crontab and /etc/cron.* directories execute commands as root. They must
+      be owned by root and writable only by root.
+    severity: high
+    category: Filesystem
+    cis: "CIS Ubuntu Linux 22.04 5.1.2"
+    check:
+      type: cron_permissions
+      params:
+        kind: permissions
+    remediation:
+      text: Set /etc/crontab to 0600 and /etc/cron.* directories to 0700, all owned by root.
+      safe: false
+      command: "chmod 600 /etc/crontab; chmod 700 /etc/cron.d /etc/cron.hourly /etc/cron.daily /etc/cron.weekly /etc/cron.monthly"
+    tags: [filesystem, permissions, cron]
+
+  - id: AEGIS-0039
+    title: Cron and at are not restricted by allow lists
+    description: >
+      Without cron.allow and at.allow, any local user may schedule jobs. Explicit
+      allow lists limit those facilities to trusted administrators.
+    severity: high
+    category: Filesystem
+    cis: "CIS Ubuntu Linux 22.04 5.1.8"
+    check:
+      type: cron_permissions
+      params:
+        kind: restricted
+    remediation:
+      text: Create /etc/cron.allow and /etc/at.allow containing only authorized users, and remove the deny files.
+      safe: false
+      command: "printf 'root\\n' > /etc/cron.allow; printf 'root\\n' > /etc/at.allow; rm -f /etc/cron.deny /etc/at.deny"
+    tags: [filesystem, permissions, cron]
+
+  - id: AEGIS-0040
+    title: /tmp is missing nodev, nosuid, or noexec mount options
+    description: >
+      A separate /tmp with nodev, nosuid, and noexec prevents execution of dropped
+      binaries and blocks device or setuid abuse from a world-writable location.
+    severity: high
+    category: Filesystem
+    cis: "CIS Ubuntu Linux 22.04 1.1.2.2-1.1.2.4"
+    check:
+      type: mount_option
+      params:
+        mountpoint: /tmp
+        options: [nodev, nosuid, noexec]
+        missing: fail
+    remediation:
+      text: Add nodev,nosuid,noexec to the /tmp entry in /etc/fstab and remount it.
+      safe: false
+      command: "mount -o remount,nodev,nosuid,noexec /tmp"
+    tags: [filesystem, mounts, tmp]
+
+  - id: AEGIS-0041
+    title: /dev/shm is missing nodev, nosuid, or noexec mount options
+    description: >
+      Shared memory is a common staging area for exploits. Restricting execution and
+      device nodes there raises the cost of post-exploitation.
+    severity: high
+    category: Filesystem
+    cis: "CIS Ubuntu Linux 22.04 1.1.3"
+    check:
+      type: mount_option
+      params:
+        mountpoint: /dev/shm
+        options: [nodev, nosuid, noexec]
+        missing: fail
+    remediation:
+      text: Add nodev,nosuid,noexec to the /dev/shm entry in /etc/fstab and remount it.
+      safe: false
+      command: "mount -o remount,nodev,nosuid,noexec /dev/shm"
+    tags: [filesystem, mounts, shm]

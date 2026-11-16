@@ -1,0 +1,306 @@
+rules:
+  - id: AEGIS-0018
+    title: Address space layout randomization is not fully enabled
+    description: >
+      kernel.randomize_va_space must be 2 so that stack, heap, and shared library
+      mappings are randomized, raising the cost of memory corruption exploits.
+    severity: high
+    category: Kernel
+    cis: "CIS Ubuntu Linux 22.04 1.5.1"
+    check:
+      type: sysctl
+      params:
+        key: kernel.randomize_va_space
+        value: "2"
+    remediation:
+      text: Set kernel.randomize_va_space = 2 in /etc/sysctl.conf and apply it with sysctl -p.
+      safe: true
+      command: sysctl -w kernel.randomize_va_space=2
+      fix:
+        type: sysctl_set
+        path: /etc/sysctl.conf
+        key: kernel.randomize_va_space
+        value: "2"
+    tags: [kernel, memory, aslr]
+
+  - id: AEGIS-0019
+    title: Setuid core dumps are not restricted
+    description: >
+      fs.suid_dumpable must be 0 so that crashing setuid programs cannot write
+      memory images that may contain credentials or secrets.
+    severity: medium
+    category: Kernel
+    cis: "CIS Ubuntu Linux 22.04 1.5.4"
+    check:
+      type: sysctl
+      params:
+        key: fs.suid_dumpable
+        value: "0"
+    remediation:
+      text: Set fs.suid_dumpable = 0 in /etc/sysctl.conf.
+      safe: true
+      fix:
+        type: sysctl_set
+        path: /etc/sysctl.conf
+        key: fs.suid_dumpable
+        value: "0"
+    tags: [kernel, core-dumps]
+
+  - id: AEGIS-0020
+    title: IPv4 forwarding is enabled
+    description: >
+      A host that is not a router must not forward packets. Forwarding enables
+      traffic to cross network boundaries the host was not designed to bridge.
+    severity: medium
+    category: Kernel
+    cis: "CIS Ubuntu Linux 22.04 3.1.1"
+    check:
+      type: sysctl
+      params:
+        key: net.ipv4.ip_forward
+        value: "0"
+    remediation:
+      text: Set net.ipv4.ip_forward = 0 unless the host is an intentional router or container host requiring it.
+      safe: true
+      fix:
+        type: sysctl_set
+        path: /etc/sysctl.conf
+        key: net.ipv4.ip_forward
+        value: "0"
+    tags: [kernel, network]
+
+  - id: AEGIS-0021
+    title: IPv4 packet redirect sending is enabled
+    description: >
+      An end host should not send ICMP redirects. Redirects can rewrite another
+      host's routing decisions and are a classic traffic interception primitive.
+    severity: medium
+    category: Kernel
+    cis: "CIS Ubuntu Linux 22.04 3.1.2"
+    check:
+      type: sysctl
+      params:
+        key: net.ipv4.conf.all.send_redirects
+        value: "0"
+    remediation:
+      text: Set net.ipv4.conf.all.send_redirects = 0.
+      safe: true
+      fix:
+        type: sysctl_set
+        path: /etc/sysctl.conf
+        key: net.ipv4.conf.all.send_redirects
+        value: "0"
+    tags: [kernel, network, icmp]
+
+  - id: AEGIS-0022
+    title: Source-routed IPv4 packets are accepted
+    description: >
+      Source routing lets a sender dictate the path a packet takes and is not
+      required on normal end hosts.
+    severity: high
+    category: Kernel
+    cis: "CIS Ubuntu Linux 22.04 3.2.1"
+    check:
+      type: sysctl
+      params:
+        key: net.ipv4.conf.all.accept_source_route
+        value: "0"
+    remediation:
+      text: Set net.ipv4.conf.all.accept_source_route = 0 on all interfaces.
+      safe: true
+      fix:
+        type: sysctl_set
+        path: /etc/sysctl.conf
+        key: net.ipv4.conf.all.accept_source_route
+        value: "0"
+    tags: [kernel, network, routing]
+
+  - id: AEGIS-0023
+    title: ICMP redirects are accepted
+    description: >
+      Accepting ICMP redirects allows an attacker on the local segment to alter
+      the host's routing table and intercept traffic.
+    severity: medium
+    category: Kernel
+    cis: "CIS Ubuntu Linux 22.04 3.2.2"
+    check:
+      type: sysctl
+      params:
+        key: net.ipv4.conf.all.accept_redirects
+        value: "0"
+    remediation:
+      text: Set net.ipv4.conf.all.accept_redirects = 0.
+      safe: true
+      fix:
+        type: sysctl_set
+        path: /etc/sysctl.conf
+        key: net.ipv4.conf.all.accept_redirects
+        value: "0"
+    tags: [kernel, network, icmp]
+
+  - id: AEGIS-0024
+    title: Suspicious packets are not logged
+    description: >
+      net.ipv4.conf.all.log_martians records packets with impossible source
+      addresses, providing early warning of spoofing and misconfiguration.
+    severity: low
+    category: Kernel
+    cis: "CIS Ubuntu Linux 22.04 3.2.4"
+    check:
+      type: sysctl
+      params:
+        key: net.ipv4.conf.all.log_martians
+        value: "1"
+    remediation:
+      text: Set net.ipv4.conf.all.log_martians = 1.
+      safe: true
+      fix:
+        type: sysctl_set
+        path: /etc/sysctl.conf
+        key: net.ipv4.conf.all.log_martians
+        value: "1"
+    tags: [kernel, network, logging]
+
+  - id: AEGIS-0025
+    title: Reverse path filtering is disabled
+    description: >
+      Strict reverse path filtering drops packets whose source address would not
+      be routed back through the receiving interface, mitigating address spoofing.
+    severity: medium
+    category: Kernel
+    cis: "CIS Ubuntu Linux 22.04 3.2.7"
+    check:
+      type: sysctl
+      params:
+        key: net.ipv4.conf.all.rp_filter
+        value: "1"
+    remediation:
+      text: Set net.ipv4.conf.all.rp_filter = 1.
+      safe: true
+      fix:
+        type: sysctl_set
+        path: /etc/sysctl.conf
+        key: net.ipv4.conf.all.rp_filter
+        value: "1"
+    tags: [kernel, network, spoofing]
+
+  - id: AEGIS-0026
+    title: TCP SYN cookies are disabled
+    description: >
+      SYN cookies allow the host to keep serving legitimate connections during a
+      SYN flood instead of exhausting the backlog.
+    severity: medium
+    category: Kernel
+    cis: "CIS Ubuntu Linux 22.04 3.2.8"
+    check:
+      type: sysctl
+      params:
+        key: net.ipv4.tcp_syncookies
+        value: "1"
+    remediation:
+      text: Set net.ipv4.tcp_syncookies = 1.
+      safe: true
+      fix:
+        type: sysctl_set
+        path: /etc/sysctl.conf
+        key: net.ipv4.tcp_syncookies
+        value: "1"
+    tags: [kernel, network, dos]
+
+  - id: AEGIS-0027
+    title: IPv6 router advertisements are accepted
+    description: >
+      Hosts that do not rely on IPv6 autoconfiguration should ignore router
+      advertisements, preventing rogue routers from changing default routes.
+    severity: medium
+    category: Kernel
+    cis: "CIS Ubuntu Linux 22.04 3.2.9"
+    check:
+      type: sysctl
+      params:
+        key: net.ipv6.conf.all.accept_ra
+        value: "0"
+    remediation:
+      text: Set net.ipv6.conf.all.accept_ra = 0 where IPv6 autoconfiguration is not used.
+      safe: true
+      fix:
+        type: sysctl_set
+        path: /etc/sysctl.conf
+        key: net.ipv6.conf.all.accept_ra
+        value: "0"
+    tags: [kernel, network, ipv6]
+
+  - id: AEGIS-0028
+    title: The cramfs kernel module is available
+    description: >
+      cramfs is rarely required on modern servers. Blocking the module reduces the
+      kernel filesystem attack surface available to local attackers.
+    severity: medium
+    category: Kernel
+    cis: "CIS Ubuntu Linux 22.04 1.1.1.1"
+    check:
+      type: kernel_module
+      params:
+        module: cramfs
+        state: disabled
+    remediation:
+      text: Add "install cramfs /bin/false" to a file in /etc/modprobe.d and run modprobe -r cramfs.
+      safe: false
+      command: "printf 'install cramfs /bin/false\\n' > /etc/modprobe.d/cramfs.conf"
+    tags: [kernel, modules, filesystems]
+
+  - id: AEGIS-0029
+    title: The freevxfs kernel module is available
+    description: >
+      The freevxfs filesystem is obsolete and unnecessary on managed Linux hosts.
+    severity: medium
+    category: Kernel
+    cis: "CIS Ubuntu Linux 22.04 1.1.1.2"
+    check:
+      type: kernel_module
+      params:
+        module: freevxfs
+        state: disabled
+    remediation:
+      text: Add "install freevxfs /bin/false" to /etc/modprobe.d.
+      safe: false
+      command: "printf 'install freevxfs /bin/false\\n' > /etc/modprobe.d/freevxfs.conf"
+    tags: [kernel, modules, filesystems]
+
+  - id: AEGIS-0030
+    title: The udf kernel module is available
+    description: >
+      UDF is used for optical media and is not normally needed on a server. Loading
+      unneeded filesystem drivers expands the reachable kernel attack surface.
+    severity: medium
+    category: Kernel
+    cis: "CIS Ubuntu Linux 22.04 1.1.1.6"
+    check:
+      type: kernel_module
+      params:
+        module: udf
+        state: disabled
+    remediation:
+      text: Add "install udf /bin/false" to /etc/modprobe.d.
+      safe: false
+      command: "printf 'install udf /bin/false\\n' > /etc/modprobe.d/udf.conf"
+    tags: [kernel, modules, filesystems]
+
+  - id: AEGIS-0031
+    title: The SCTP kernel module is available
+    description: >
+      SCTP is not commonly used and has a history of kernel bugs. Disabling the
+      protocol module removes that code path from local and container workloads.
+    severity: medium
+    category: Kernel
+    cis: "CIS Ubuntu Linux 22.04 3.3.2"
+    check:
+      type: kernel_module
+      params:
+        module: sctp
+        state: disabled
+    remediation:
+      text: Add "install sctp /bin/false" to /etc/modprobe.d and remove any explicit load.
+      safe: false
+      command: "printf 'install sctp /bin/false\\n' > /etc/modprobe.d/sctp.conf"
+    tags: [kernel, modules, network]

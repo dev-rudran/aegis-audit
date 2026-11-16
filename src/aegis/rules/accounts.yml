@@ -1,0 +1,275 @@
+rules:
+  - id: AEGIS-0042
+    title: More than one account has UID 0
+    description: >
+      UID 0 is the superuser. Every additional UID 0 account is an unlogged
+      backdoor that bypasses accountability and role separation.
+    severity: critical
+    category: Accounts
+    cis: "CIS Ubuntu Linux 22.04 6.2.3"
+    check:
+      type: account
+      params:
+        kind: uid_zero_unique
+    remediation:
+      text: Remove or reassign every UID 0 account other than root after reviewing its ownership.
+      safe: false
+      command: "awk -F: '($3 == 0) {print $1}' /etc/passwd"
+    tags: [accounts, privilege]
+
+  - id: AEGIS-0043
+    title: Accounts with empty password fields exist
+    description: >
+      An empty password hash permits passwordless login on every service that
+      consults PAM or the shadow database.
+    severity: critical
+    category: Accounts
+    cis: "CIS Ubuntu Linux 22.04 6.2.2"
+    check:
+      type: account
+      params:
+        kind: empty_password
+    remediation:
+      text: Lock each affected account immediately, then set a strong password or disable the account.
+      safe: false
+      command: "awk -F: '($2 == \"\") {print $1}' /etc/shadow"
+    tags: [accounts, passwords]
+
+  - id: AEGIS-0044
+    title: Accounts are not using shadowed passwords
+    description: >
+      Password hashes must live in /etc/shadow. A hash in /etc/passwd is readable by
+      every local user and can be cracked offline.
+    severity: high
+    category: Accounts
+    cis: "CIS Ubuntu Linux 22.04 6.2.1"
+    check:
+      type: account
+      params:
+        kind: shadowed_passwords
+    remediation:
+      text: Run pwconv to migrate password hashes into /etc/shadow and verify every passwd entry uses x.
+      safe: false
+      command: "pwconv"
+    tags: [accounts, passwords]
+
+  - id: AEGIS-0045
+    title: System accounts have unlocked passwords
+    description: >
+      Service accounts below UID 1000 must not be able to authenticate. Their shadow
+      entries should begin with ! or * unless a documented exception exists.
+    severity: high
+    category: Accounts
+    cis: "CIS Ubuntu Linux 22.04 5.5.2"
+    check:
+      type: account
+      params:
+        kind: system_accounts_locked
+    remediation:
+      text: Lock system accounts with usermod -L or set the shadow password field to ! for each reported service account.
+      safe: false
+      command: "awk -F: '($3 < 1000 && $3 != 0) {print $1}' /etc/passwd"
+    tags: [accounts, service-accounts]
+
+  - id: AEGIS-0046
+    title: The root account does not have a valid login shell
+    description: >
+      Root must retain a usable, absolute login shell for emergency recovery. An
+      invalid or unlisted shell can prevent administrators from repairing a host.
+    severity: medium
+    category: Accounts
+    cis: "CIS Ubuntu Linux 22.04 5.5.2 (root account)"
+    check:
+      type: account
+      params:
+        kind: root_shell_valid
+    remediation:
+      text: Set root's shell to a valid entry from /etc/shells, normally /bin/bash.
+      safe: false
+      command: "chsh -s /bin/bash root"
+    tags: [accounts, root]
+
+  - id: AEGIS-0047
+    title: Duplicate UIDs exist
+    description: >
+      Duplicate UIDs make file ownership ambiguous and can hide a second account
+      with another user's privileges.
+    severity: high
+    category: Accounts
+    cis: "CIS Ubuntu Linux 22.04 6.2.14"
+    check:
+      type: account
+      params:
+        kind: duplicate_uid
+    remediation:
+      text: Resolve duplicate UIDs by assigning a unique UID and reconciling file ownership.
+      safe: false
+      command: "awk -F: '{print $3}' /etc/passwd | sort | uniq -d"
+    tags: [accounts, identity]
+
+  - id: AEGIS-0048
+    title: Login users have missing home directories
+    description: >
+      A missing home directory breaks login, hides user data, and can cause services
+      to fall back to unsafe working directories.
+    severity: medium
+    category: Accounts
+    cis: "CIS Ubuntu Linux 22.04 6.2.5"
+    check:
+      type: account
+      params:
+        kind: home_exists
+    remediation:
+      text: Create each missing home directory with the correct owner and mode, or disable the account.
+      safe: false
+      command: "awk -F: '($3 >= 1000) {print $1, $6}' /etc/passwd"
+    tags: [accounts, home]
+
+  - id: AEGIS-0049
+    title: User home directories are more permissive than 0750
+    description: >
+      Home directories should not be readable or writable by other unprivileged
+      users. Group and world access can leak shell history, keys, and application data.
+    severity: medium
+    category: Accounts
+    cis: "CIS Ubuntu Linux 22.04 6.2.6"
+    check:
+      type: account
+      params:
+        kind: home_permissions
+        max_mode: "0750"
+    remediation:
+      text: Set each home directory to mode 0750 or more restrictive.
+      safe: false
+      command: "chmod 750 /home/*"
+    tags: [accounts, permissions, home]
+
+  - id: AEGIS-0050
+    title: Password aging exceeds policy
+    description: >
+      Login accounts must expire passwords within 365 days and warn at least seven
+      days before expiry. Non-expiring passwords increase the value of a leaked hash.
+    severity: high
+    category: Accounts
+    cis: "CIS Ubuntu Linux 22.04 5.5.1.2"
+    check:
+      type: account
+      params:
+        kind: password_expiry
+        max_days: 365
+    remediation:
+      text: Set PASS_MAX_DAYS 365, PASS_WARN_AGE 7, and PASS_MIN_DAYS 1 for each login account.
+      safe: false
+      command: "chage --maxdays 365 --warndays 7 --mindays 1 root"
+    tags: [accounts, passwords, aging]
+
+  - id: AEGIS-0051
+    title: Inactive accounts are not locked after thirty days
+    description: >
+      An account that remains inactive should be locked automatically so abandoned
+      credentials cannot be used indefinitely.
+    severity: medium
+    category: Accounts
+    cis: "CIS Ubuntu Linux 22.04 5.5.1.4"
+    check:
+      type: account
+      params:
+        kind: inactive_lock
+        max_days: 30
+    remediation:
+      text: Set the inactive field to 30 days for every login account.
+      safe: false
+      command: "chage --inactive 30 root"
+    tags: [accounts, passwords, lockout]
+
+  - id: AEGIS-0052
+    title: login.defs PASS_MAX_DAYS exceeds 365
+    description: >
+      The default maximum password age applies to new accounts and must not exceed
+      one year.
+    severity: high
+    category: Accounts
+    cis: "CIS Ubuntu Linux 22.04 5.5.1.2"
+    check:
+      type: login_defs
+      params:
+        key: PASS_MAX_DAYS
+        max: 365
+    remediation:
+      text: Set PASS_MAX_DAYS 365 in /etc/login.defs.
+      safe: true
+      fix:
+        type: login_defs_set
+        path: /etc/login.defs
+        key: PASS_MAX_DAYS
+        value: "365"
+    tags: [accounts, passwords, login-defs]
+
+  - id: AEGIS-0053
+    title: login.defs PASS_MIN_DAYS is below one
+    description: >
+      A minimum password age prevents users from cycling through passwords to return
+      to a previously used credential.
+    severity: medium
+    category: Accounts
+    cis: "CIS Ubuntu Linux 22.04 5.5.1.1"
+    check:
+      type: login_defs
+      params:
+        key: PASS_MIN_DAYS
+        min: 1
+    remediation:
+      text: Set PASS_MIN_DAYS 1 in /etc/login.defs.
+      safe: true
+      fix:
+        type: login_defs_set
+        path: /etc/login.defs
+        key: PASS_MIN_DAYS
+        value: "1"
+    tags: [accounts, passwords, login-defs]
+
+  - id: AEGIS-0054
+    title: login.defs PASS_WARN_AGE is below seven days
+    description: >
+      Users need advance notice of password expiry to avoid lockouts and rushed
+      credential choices.
+    severity: medium
+    category: Accounts
+    cis: "CIS Ubuntu Linux 22.04 5.5.1.3"
+    check:
+      type: login_defs
+      params:
+        key: PASS_WARN_AGE
+        min: 7
+    remediation:
+      text: Set PASS_WARN_AGE 7 in /etc/login.defs.
+      safe: true
+      fix:
+        type: login_defs_set
+        path: /etc/login.defs
+        key: PASS_WARN_AGE
+        value: "7"
+    tags: [accounts, passwords, login-defs]
+
+  - id: AEGIS-0055
+    title: Default user umask is less restrictive than 027
+    description: >
+      A umask of 027 prevents new files from being group-writable and hides them from
+      other users. A permissive default silently exposes newly created data.
+    severity: medium
+    category: Accounts
+    cis: "CIS Ubuntu Linux 22.04 5.5.4"
+    check:
+      type: login_defs
+      params:
+        key: UMASK
+        requires_bits: "027"
+    remediation:
+      text: Set UMASK 027 in /etc/login.defs and review shell or PAM umask overrides.
+      safe: true
+      fix:
+        type: login_defs_set
+        path: /etc/login.defs
+        key: UMASK
+        value: "027"
+    tags: [accounts, umask, login-defs]

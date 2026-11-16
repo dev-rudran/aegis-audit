@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="300" viewBox="0 0 1200 300" role="img" aria-labelledby="title desc">
+  <title id="title">aegis - CIS-aligned Linux host hardening auditor</title>
+  <desc id="desc">A shield mark beside the aegis wordmark and a short description of weighted scoring and report formats.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0a1018"/>
+      <stop offset="0.55" stop-color="#0e1724"/>
+      <stop offset="1" stop-color="#132033"/>
+    </linearGradient>
+    <linearGradient id="shield" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4fd1c5"/>
+      <stop offset="1" stop-color="#2c8f88"/>
+    </linearGradient>
+    <linearGradient id="word" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#f2f7fb"/>
+      <stop offset="1" stop-color="#b9c9d9"/>
+    </linearGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1c2b3d" stroke-width="1" opacity="0.55"/>
+    </pattern>
+  </defs>
+
+  <rect width="1200" height="300" fill="url(#bg)"/>
+  <rect width="1200" height="300" fill="url(#grid)"/>
+  <rect x="0" y="0" width="1200" height="4" fill="#4fd1c5"/>
+
+  <g transform="translate(96 74)">
+    <path d="M52 0 L104 20 V66 C104 104 82 132 52 148 C22 132 0 104 0 66 V20 Z"
+          fill="none" stroke="url(#shield)" stroke-width="4" stroke-linejoin="round"/>
+    <path d="M30 72 L46 90 L76 52" fill="none" stroke="#f2f7fb" stroke-width="7"
+          stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <text x="244" y="146" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif"
+        font-size="86" font-weight="600" letter-spacing="14" fill="url(#word)">AEGIS</text>
+  <text x="248" y="188" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif"
+        font-size="21" letter-spacing="4.5" fill="#7f95aa">CIS-ALIGNED LINUX HOST HARDENING AUDITOR</text>
+
+  <g font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="17" fill="#9fb2c6">
+    <text x="248" y="238">Weighted scoring</text>
+    <text x="418" y="238">81 rules</text>
+    <text x="536" y="238">18 checks</text>
+    <text x="672" y="238">Safe remediation</text>
+    <text x="856" y="238">SARIF for CI</text>
+  </g>
+
+  <g stroke="#2c8f88" stroke-width="2" opacity="0.8">
+    <line x1="402" y1="230" x2="402" y2="242"/>
+    <line x1="520" y1="230" x2="520" y2="242"/>
+    <line x1="656" y1="230" x2="656" y2="242"/>
+    <line x1="840" y1="230" x2="840" y2="242"/>
+  </g>
+</svg>
