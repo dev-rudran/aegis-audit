@@ -1,0 +1,71 @@
+name: Hardening audit
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit-runner:
+    name: Audit runner
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Audit the runner
+        id: audit
+        uses: dev-rudran/aegis-audit@v1
+        with:
+          root: /
+          fail-on: high
+          format: sarif
+          output: aegis-runner.sarif
+
+      - name: Report the result
+        if: always()
+        env:
+          SCORE: ${{ steps.audit.outputs.score }}
+          GATE: ${{ steps.audit.outputs.gate }}
+        run: echo "aegis score=${SCORE:-unknown} gate=${GATE:-unknown}"
+
+  audit-container:
+    name: Audit container rootfs
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Export the image rootfs
+        run: |
+          # Replace the build with the Dockerfile or image for the application under test.
+          docker build -t aegis-target:ci .
+          mkdir -p "$RUNNER_TEMP/rootfs"
+          docker create --name aegis-target aegis-target:ci
+          docker export aegis-target | tar --no-same-owner -x -C "$RUNNER_TEMP/rootfs"
+
+      - name: Audit the image rootfs
+        id: audit
+        uses: dev-rudran/aegis-audit@v1
+        with:
+          root: ${{ runner.temp }}/rootfs
+          fail-on: high
+          min-score: "80"
+          format: sarif
+          output: aegis-container.sarif
+
+      - name: Report the result
+        if: always()
+        env:
+          SCORE: ${{ steps.audit.outputs.score }}
+          GATE: ${{ steps.audit.outputs.gate }}
+        run: echo "aegis score=${SCORE:-unknown} gate=${GATE:-unknown}"

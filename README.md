@@ -449,6 +449,42 @@ jobs:
 The process exits 1 on a gate failure and 2 on a usage or runtime error, so a
 broken rule pack is distinguishable from a failed audit.
 
+## GitHub Actions
+
+The repository also ships a composite action for Linux runners that installs
+aegis, runs the audit gate, and uploads the SARIF report to code scanning. The
+job needs `contents: read` and `security-events: write`:
+
+```yaml
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Audit the runner
+        id: audit
+        uses: dev-rudran/aegis-audit@v1
+        with:
+          root: /
+          fail-on: high
+          min-score: "80"
+          format: sarif
+          output: aegis.sarif
+      - run: echo "score=${{ steps.audit.outputs.score }} gate=${{ steps.audit.outputs.gate }}"
+```
+
+Inputs are `root`, `fail-on`, `min-score`, `format`, `output`, `baseline`, and
+`upload-sarif`. The action exposes `score`, `gate`, and `report` outputs. With
+the default `sarif` format and `upload-sarif: true`, findings appear under
+**Security > Code scanning alerts** in the repository's Security tab. Point
+`root` at an exported container rootfs to audit an image instead of the runner.
+See [`examples/github-actions.yml`](examples/github-actions.yml) for a complete
+workflow that audits both the runner and a built image.
+
 ## Development
 
 ```sh

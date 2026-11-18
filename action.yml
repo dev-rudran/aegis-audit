@@ -1,0 +1,184 @@
+name: aegis hardening audit
+description: Run a CIS-aligned Linux host or container rootfs audit with aegis, enforce severity and score gates, and upload SARIF to code scanning.
+author: dev-rudran
+
+branding:
+  icon: shield
+  color: blue
+
+inputs:
+  root:
+    description: Filesystem root to audit, such as / or an exported container rootfs directory.
+    required: false
+    default: /
+  fail-on:
+    description: Lowest severity that fails the gate (critical, high, medium, low, or never).
+    required: false
+    default: high
+  min-score:
+    description: Minimum weighted score from 0 to 100; leave empty to disable the score gate.
+    required: false
+    default: ""
+  format:
+    description: Report format (console, json, md, html, or sarif).
+    required: false
+    default: sarif
+  output:
+    description: Path for the generated report, relative to the caller workspace.
+    required: false
+    default: aegis.sarif
+  baseline:
+    description: Optional YAML baseline of time-bound exceptions to suppress known findings.
+    required: false
+    default: ""
+  upload-sarif:
+    description: Upload the report to GitHub code scanning when the format is sarif.
+    required: false
+    default: "true"
+
+outputs:
+  score:
+    description: Weighted audit score from 0 to 100, or empty when the report cannot be parsed.
+    value: ${{ steps.metadata.outputs.score }}
+  gate:
+    description: Gate result, one of PASS, FAIL, or ERROR.
+    value: ${{ steps.metadata.outputs.gate }}
+  report:
+    description: Path to the generated report.
+    value: ${{ steps.audit.outputs.report }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+
+    - name: Install aegis
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      run: python -m pip install .
+
+    - name: Run aegis audit
+      id: audit
+      shell: bash
+      env:
+        AEGIS_ROOT: ${{ inputs.root }}
+        AEGIS_FAIL_ON: ${{ inputs.fail-on }}
+        AEGIS_MIN_SCORE: ${{ inputs.min-score }}
+        AEGIS_FORMAT: ${{ inputs.format }}
+        AEGIS_OUTPUT: ${{ inputs.output }}
+        AEGIS_BASELINE: ${{ inputs.baseline }}
+      run: |
+        set -uo pipefail
+        args=(audit --root "$AEGIS_ROOT" --fail-on "$AEGIS_FAIL_ON" --format "$AEGIS_FORMAT" --output "$AEGIS_OUTPUT" --no-color)
+        if [ -n "$AEGIS_MIN_SCORE" ]; then
+          args+=(--min-score "$AEGIS_MIN_SCORE")
+        fi
+        if [ -n "$AEGIS_BASELINE" ]; then
+          args+=(--baseline "$AEGIS_BASELINE")
+        fi
+
+        set +e
+        aegis "${args[@]}"
+        status=$?
+        set -e
+
+        echo "exit-code=$status" >> "$GITHUB_OUTPUT"
+        echo "report=$AEGIS_OUTPUT" >> "$GITHUB_OUTPUT"
+        echo "aegis exited with status $status"
+
+    - name: Collect score and gate
+      id: metadata
+      shell: bash
+      env:
+        AEGIS_ROOT: ${{ inputs.root }}
+        AEGIS_FAIL_ON: ${{ inputs.fail-on }}
+        AEGIS_MIN_SCORE: ${{ inputs.min-score }}
+        AEGIS_FORMAT: ${{ inputs.format }}
+        AEGIS_OUTPUT: ${{ inputs.output }}
+        AEGIS_BASELINE: ${{ inputs.baseline }}
+        AEGIS_EXIT_CODE: ${{ steps.audit.outputs.exit-code }}
+      run: |
+        set -euo pipefail
+        json_report="$AEGIS_OUTPUT"
+        status="${AEGIS_EXIT_CODE:-2}"
+        cleanup=""
+
+        if [ "$AEGIS_FORMAT" != "json" ] || [ "$AEGIS_OUTPUT" = "-" ] || [ ! -f "$AEGIS_OUTPUT" ]; then
+          json_report="$(mktemp "${RUNNER_TEMP:-/tmp}/aegis-metadata-XXXXXX.json")"
+          cleanup="$json_report"
+          args=(audit --root "$AEGIS_ROOT" --fail-on "$AEGIS_FAIL_ON" --format json --output "$json_report" --no-color)
+          if [ -n "$AEGIS_MIN_SCORE" ]; then
+            args+=(--min-score "$AEGIS_MIN_SCORE")
+          fi
+          if [ -n "$AEGIS_BASELINE" ]; then
+            args+=(--baseline "$AEGIS_BASELINE")
+          fi
+
+          set +e
+          aegis "${args[@]}" > /dev/null
+          set -e
+        fi
+
+        export AEGIS_JSON_REPORT="$json_report"
+        export AEGIS_EXIT_CODE="$status"
+        python - <<'PY'
+        import json
+        import os
+        from pathlib import Path
+
+        report_path = Path(os.environ["AEGIS_JSON_REPORT"])
+        try:
+            exit_code = int(os.environ.get("AEGIS_EXIT_CODE", "2"))
+        except ValueError:
+            exit_code = 2
+
+        score = ""
+        try:
+            payload = json.loads(report_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            payload = {}
+        if isinstance(payload, dict):
+            raw_score = payload.get("score")
+            if isinstance(raw_score, (int, float)) and not isinstance(raw_score, bool):
+                score = f"{float(raw_score):.2f}"
+
+        gate = {0: "PASS", 1: "FAIL"}.get(exit_code, "ERROR")
+        output_path = os.environ.get("GITHUB_OUTPUT")
+        if output_path:
+            with open(output_path, "a", encoding="utf-8") as handle:
+                handle.write(f"score={score}\n")
+                handle.write(f"gate={gate}\n")
+
+        print(f"aegis score: {score or 'unknown'} gate: {gate}")
+        PY
+
+        if [ -n "$cleanup" ]; then
+          rm -f "$cleanup"
+        fi
+
+    - name: Upload SARIF to code scanning
+      if: >-
+        ${{ inputs.upload-sarif == 'true'
+        && inputs.format == 'sarif'
+        && inputs.output != '-'
+        && (steps.audit.outputs.exit-code == '0' || steps.audit.outputs.exit-code == '1') }}
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: ${{ inputs.output }}
+
+    - name: Enforce audit result
+      if: ${{ steps.audit.outputs.exit-code != '0' }}
+      shell: bash
+      env:
+        AEGIS_EXIT_CODE: ${{ steps.audit.outputs.exit-code }}
+      run: |
+        code="${AEGIS_EXIT_CODE:-2}"
+        if [ "$code" = "1" ]; then
+          echo "::error::aegis gate failed; review the report and code scanning alerts."
+        else
+          echo "::error::aegis audit failed with exit code $code."
+        fi
+        exit "$code"

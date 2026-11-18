@@ -3,6 +3,13 @@
 All notable changes to this project are documented here. The format follows
 Keep a Changelog, and the project adheres to Semantic Versioning.
 
+## Unreleased
+
+### Added
+
+- Composite GitHub Action that installs aegis, runs the audit gate, uploads SARIF
+  to code scanning, and exposes the score, gate, and report path as outputs.
+
 ## [0.1.0] - 2026-11-16
 
 First public release.
