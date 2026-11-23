@@ -24,6 +24,8 @@ network access.
 - **Image auditing** through `--root`, with chroot-style symlink resolution that
   cannot escape the target tree.
 
+See [docs/QUICKSTART.md](docs/QUICKSTART.md) for a five-minute walkthrough.
+
 ## Installation
 
 Python 3.10 or newer is required. The only runtime dependency is PyYAML.
